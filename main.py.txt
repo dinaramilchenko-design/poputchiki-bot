@@ -1,0 +1,106 @@
+import json
+import os
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ContextTypes
+
+# ВАШ ТОКЕН (вставьте сюда!)
+BOT_TOKEN = "123456789:ABCdefGhIJKlmnoPqrStUvwxYz123456789"  # ← ЗАМЕНИТЕ НА СВОЙ!
+
+# Файл для хранения записей
+DATA_FILE = "users.json"
+
+# Загружаем данные из файла
+def load_data():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+# Сохраняем данные в файл
+def save_data(data):
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+# Команда /elektrichka 18:15
+async def set_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    if not username:
+        await update.message.reply_text("❗ У вас нет username в Telegram. Пожалуйста, установите его в настройках профиля.")
+        return
+
+    if not context.args:
+        await update.message.reply_text("📌 Используйте: /elektrichka 18:15")
+        return
+
+    time = context.args[0]
+    data = load_data()
+
+    if time not in 
+        data[time] = []
+
+    if username not in data[time]:
+        data[time].append(username)
+        save_data(data)
+        await update.message.reply_text(f"✅ Вы записаны на электричку в {time}!")
+    else:
+        await update.message.reply_text(f"Вы уже записаны на {time}!")
+
+# Команда /list 18:15 — показать список
+async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("📌 Используйте: /list 18:15")
+        return
+
+    time = context.args[0]
+    data = load_data()
+
+    if time not in data or len(data[time]) == 0:
+        await update.message.reply_text(f"На электричку в {time} пока никто не записался.")
+        return
+
+    users = ", ".join([f"@{u}" for u in data[time]])
+    await update.message.reply_text(f"👥 На электричку в {time} идут:\n{users}\n\n📍 Встречаемся у входа за 5 минут до отправления!")
+
+# Команда /cancel 18:15 — отписаться
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("📌 Используйте: /cancel 18:15")
+        return
+
+    time = context.args[0]
+    username = update.effective_user.username
+    data = load_data()
+
+    if time in data and username in data[time]:
+        data[time].remove(username)
+        save_data(data)
+        await update.message.reply_text(f"❌ Вы отписались от электрички в {time}.")
+    else:
+        await update.message.reply_text(f"Вы не были записаны на {time}.")
+
+# Команда /help
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "📌 Бот для поиска попутчиков на электричку\n\n"
+        "/elektrichka 18:15 — записаться\n"
+        "/list 18:15 — посмотреть, кто идёт\n"
+        "/cancel 18:15 — отписаться\n"
+        "/help — показать это сообщение\n\n"
+        "Бот не хранит ваши данные — только никнеймы в Telegram. Безопасно!"
+    )
+
+# Запуск бота
+def main():
+    application = Application.builder().token(BOT_TOKEN).build()
+
+    application.add_handler(CommandHandler("elektrichka", set_time))
+    application.add_handler(CommandHandler("list", show_list))
+    application.add_handler(CommandHandler("cancel", cancel))
+    application.add_handler(CommandHandler("help", help_command))
+
+    print("🤖 Бот запущен! Ожидает сообщения...")
+    application.run_polling()
+
+if __name__ == "__main__":
+    main()
